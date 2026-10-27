@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Nomenclaturas y UTMs</title>
+<style>
+  :root{
+    --bg:#061347; --card:#00001C; --ink:#FFFFFF; --muted:#8793ad;
+    --line:#2a3658; --accent:#00C3E9; --accent2:#00C3E9; --warn:#00C3E9; --danger:#ff5d6c;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 85% -10%,#1b2a4d 0,var(--bg) 55%);
+    color:var(--ink);min-height:100vh;padding:26px 14px}
+  .wrap{max-width:1000px;margin:0 auto}
+  header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:22px}
+  .header-left{display:flex;align-items:center;gap:14px}
+  .logo{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;flex:none}
+  .brand-logo{max-height:48px;width:auto;object-fit:contain;flex:none}
+  h1{font-size:1.45rem;margin:0}
+  header p{margin:4px 0 0;color:var(--accent2);font-size:.85rem;font-weight:600}
+  .section-title{display:flex;align-items:center;gap:10px;margin:26px 0 12px;font-size:1.1rem;font-weight:700;flex-wrap:wrap}
+  .section-title .num{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#7ab4ff);color:#fff;display:grid;place-items:center;font-size:.85rem;flex:none}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+  .grid{display:grid;gap:15px;grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:760px){.grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:520px){.grid{grid-template-columns:1fr}}
+  label{display:block;font-size:.74rem;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .full{grid-column:1/-1}
+  input,select,textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:#101a30;color:var(--ink);font-size:.93rem;outline:none;transition:border .15s,box-shadow .15s;font-family:inherit}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,156,255,.25)}
+  select:disabled,input:disabled{opacity:.6;cursor:not-allowed;background:#0d1526}
+  .hint{font-size:.71rem;color:var(--muted);margin-top:5px}
+  .req::after{content:" *";color:var(--warn)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .models{max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:#101a30;padding:6px;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px;align-content:start}
+  .models:empty{display:block}
+  .models:empty::after{content:"Elige una marca para ver los modelos…";color:var(--muted);font-size:.84rem;display:block;padding:10px}
+  .mitem{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:.88rem;line-height:1.2;width:100%}
+  .mitem:hover{background:#17213c}
+  .mitem input[type=checkbox]{width:16px;height:16px;flex:none;margin:0;accent-color:var(--accent)}
+  .mitem span{flex:1;word-break:break-word}
+  .mtools{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .mtools button{padding:6px 12px;font-size:.76rem}
+  .selcount{font-size:.71rem;color:var(--accent2);margin-top:5px}
+  .result{background:#0a1124;border:1px dashed var(--accent);border-radius:12px;padding:16px;word-break:break-all;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1rem;line-height:1.5;min-height:28px}
+  .result .seg{color:var(--accent2)}.result .sep{color:var(--muted)}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  button{border:0;border-radius:10px;padding:10px 16px;font-size:.9rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:transform .08s}
+  button:active{transform:scale(.97)}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),#7ab4ff);color:#fff}
+  .btn-ghost{background:#1c2744;color:var(--ink);border:1px solid var(--line)}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(120%);background:var(--accent2);color:#06281c;padding:12px 22px;border-radius:30px;font-weight:600;transition:transform .3s;z-index:50;max-width:90%;text-align:center}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .toast.err{background:var(--danger);color:#fff}
+  h2{font-size:1rem;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  .tag{display:inline-block;background:#1c2744;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:.7rem;color:var(--muted);margin-left:6px;font-family:ui-monospace,monospace}
+  .order{font-family:ui-monospace,monospace;font-size:.7rem;color:var(--muted);margin-top:8px;line-height:1.6}
+  .utm-box{background:#0a1124;border:1px solid var(--line);border-radius:10px;padding:12px;font-family:ui-monospace,monospace;font-size:.82rem;word-break:break-all;color:var(--muted);margin-top:6px}
+  .utm-box b{color:var(--accent)}
+  .valmsg{font-size:.85rem;margin-top:8px;font-weight:600}
+  .valmsg.ok{color:var(--accent2)}.valmsg.bad{color:var(--danger)}
+  .valout{font-family:ui-monospace,monospace;font-size:.9rem;word-break:break-all;margin-top:8px;padding:10px;border-radius:8px;background:#0a1124;border:1px solid var(--line)}
+  .valout.bad{border-color:var(--danger);color:var(--danger)}
+  .valout.ok{border-color:var(--accent2)}
+  .note{background:rgba(79,156,255,.08);border:1px solid rgba(79,156,255,.35);border-radius:10px;padding:10px 12px;font-size:.82rem;color:#bcd6ff;margin-bottom:14px}
+  .linkpill{display:inline-flex;align-items:center;gap:5px;background:rgba(46,230,166,.1);border:1px solid rgba(46,230,166,.35);color:var(--accent2);border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:600}
+  .lead-si{color:var(--accent2)!important;font-weight:700}
+  .lead-no{color:var(--muted)!important}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="header-left">
+      <div class="logo"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h7"/></svg></div>
+      <div>
+        <h1>Generador de Nomenclaturas y UTM's</h1>
+        <p>Hecho por Carolina Duarte</p>
+      </div>
+    </div>
+    <img src="logo.png" alt="Logo" class="brand-logo">
+  </header>
+
+  <div class="section-title"><span class="num">1</span> Nomenclatura de Campaña</div>
+  <div class="card">
+    <div class="grid">
+      <div><label class="req">País</label><select id="pais"></select></div>
+      <div><label class="req">Tipo de campaña</label><select id="tipo"></select></div>
+      <div><label class="req">Marca</label><select id="marca"></select></div>
+      <div><label class="req">Objetivo de campaña</label><select id="objetivo"></select></div>
+      <div class="full">
+        <label class="req">Modelo(s) — varios (se separan con <b>+</b>)</label>
+        <div class="models" id="models"></div>
+        <div class="mtools"><button class="btn-ghost" id="m-all" type="button">Seleccionar todos</button><button class="btn-ghost" id="m-none" type="button">Quitar todos</button></div>
+        <div class="selcount" id="selcount"></div>
+      </div>
+      <div><label class="req">Fecha</label><div class="two"><select id="mes"></select><input id="anio" type="number" placeholder="2026" min="2000" max="2100"></div><div class="hint">Resultado tipo <b>oct2026</b>.</div></div>
+      <div><label class="req">Subtipo de campaña</label><select id="subtipo"></select></div>
+      <div><label class="req">Plataforma</label><select id="plataforma"></select><div class="hint">Se vincula con utm_source.</div></div>
+      <div><label>Campo libre 1</label><input id="libre1" placeholder="opcional"></div>
+      <div><label>Campo libre 2</label><input id="libre2" placeholder="opcional"></div>
+    </div>
+    <div class="order">Nombre de campaña: pais_tipo_marca_objetivo_modelo_fecha_subtipo_plataforma_libre1_libre2</div>
+  </div>
+  <div class="card">
+    <h2>🏷️ Nomenclatura de campaña <span class="tag">utm_campaign</span></h2>
+    <div class="result" id="result"></div>
+    <div class="utm-box" id="utmline"></div>
+    <div class="actions">
+      <button class="btn-primary" id="copy">📋 Copiar</button>
+      <button class="btn-ghost" id="copyUtm">🔗 Copiar como utm_campaign</button>
+      <button class="btn-ghost" id="reset">↺ Limpiar</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>✅ Validar nomenclatura pegada</h2>
+    <label>Pega una nomenclatura de campaña (al validar, se rellena todo el generador)</label>
+    <input id="valin" placeholder="co_tc_bmw_alcance_x5+oct2026_branding_meta">
+    <div class="valout" id="valout" style="display:none"></div>
+    <div class="valmsg" id="valmsg"></div>
+    <div class="hint">Ajusta espacios automáticamente. Si el orden no corresponde, se marca en rojo con alerta.</div>
+  </div>
+
+  <div class="section-title"><span class="num">2</span> Grupo de Anuncios <span class="linkpill">Nomenclatura de grupo de anuncios</span></div>
+  <div class="note">El <b>subtipo</b>, la <b>plataforma del formato</b> y los <b>modelos</b> se toman del nombre de Campaña.</div>
+  <div class="card">
+    <div class="grid">
+      <div><label class="req">Subtipo de campaña</label><input id="g-sub" disabled placeholder="Ejile en campaña"></div>
+      <div><label class="req">Plataforma del formato</label><input id="g-platform-show" disabled placeholder="Ejile en campaña"></div>
+      <div><label class="req">Formato</label><select id="g-formato"></select><div class="hint"></div></div>
+      <div class="full"><label class="req">Modelo(s) elegidos en campaña)</label><div class="models" id="g-models"></div><div class="selcount" id="g-selcount"></div></div>
+      <div><label class="req">Fecha</label><div class="two"><select id="g-mes"></select><input id="g-anio" type="number" placeholder="2026"></div></div>
+      <div><label class="req">Segmentación</label><select id="g-seg"></select></div>
+      <div><label>Campo libre</label><input id="g-libre" placeholder="opcional"></div>
+    </div>
+    <div class="order">Nombre del grupo: subtipo_formato_fecha_modelo_segmentacion_libre</div>
+  </div>
+  <div class="card">
+    <h2>🏷️ Nomenclatura grupo de anuncios</h2>
+    <div class="result" id="g-result"></div>
+    <div class="actions"><button class="btn-primary" id="g-copy">📋 Copiar</button><button class="btn-ghost" id="g-reset">↺ Limpiar</button></div>
+  </div>
+
+  <div class="section-title"><span class="num">3</span> Anuncios <span class="linkpill">heredado de 1 y 2</span></div>
+  <div class="note">El <b>subtipo</b>, la <b>plataforma</b> (de campaña) y el <b>formato</b> (de grupo de anuncios) se toman automáticamente.</div>
+  <div class="card">
+    <div class="grid">
+      <div><label class="req">Subtipo de campaña</label><input id="a-sub" disabled placeholder="Ejile en campaña"></div>
+      <div><label class="req">Plataforma del formato</label><input id="a-platform-show" disabled placeholder="Ejile en campaña"></div>
+      <div><label class="req">Formato</label><input id="a-formato-show" disabled placeholder="Elige en Grupo de anuncios"></div>
+      <div class="full"><label class="req">Modelo(s) (de los elegidos en 1)</label><div class="models" id="a-models"></div><div class="selcount" id="a-selcount"></div></div>
+      <div><label class="req">Fecha</label><div class="two"><select id="a-mes"></select><input id="a-anio" type="number" placeholder="2026"></div></div>
+      <div><label>Campo libre 1</label><input id="a-libre1" placeholder="opcional"></div>
+      <div><label>Campo libre 2</label><input id="a-libre2" placeholder="opcional"></div>
+    </div>
+    <div class="order">Nombre del anuncio: subtipo_formato_fecha_modelo_libre1_libre2</div>
+  </div>
+  <div class="card">
+    <h2>🏷️ Nomenclatura de anuncio</h2>
+    <div class="result" id="a-result"></div>
+    <div class="actions"><button class="btn-primary" id="a-copy">📋 Copiar</button><button class="btn-ghost" id="a-reset">↺ Limpiar</button></div>
+  </div>
+
+  <div class="section-title"><span class="num">4</span> Generador de UTM <span class="linkpill">URL Final con UTM</span></div>
+  <div class="note">source = <b>plataforma</b> · campaign = <b>nomenclatura de campaña</b> · content = <b>nombre del anuncio</b>. Si en el Grupo de anuncios la plataforma es <b>Meta</b> y el formato <b>Leadads</b>, la UTM se genera sin URL.</div>
+  <div class="card">
+    <div class="grid">
+      <div class="full"><label>URL de destino</label><input id="u-url" placeholder="https://www.gwm.com.pe/"><div class="hint">Opcional solo si Leadads está detectado.</div></div>
+      <div><label class="req">utm_source (plataforma)</label><input id="u-source" disabled placeholder="Nombre plataforma"></div>
+      <div><label class="req">utm_medium</label><select id="u-medium"></select></div>
+      <div><label>Formato Leadads detectado</label><input id="u-lead" disabled></div>
+      <div class="full"><label class="req">utm_campaign</label><input id="u-campaign" disabled placeholder="Nombre campaña"></div>
+      <div class="full"><label class="req">utm_content</label><input id="u-content" disabled placeholder="Nombre anuncio"></div>
+    </div>
+    <div class="order">Orden de la UTMs: URL_source_medium_campaign_content</div>
+  </div>
+  <div class="card">
+    <h2>🔗 UTM generada</h2>
+    <div class="result" id="u-result"></div>
+    <div class="actions"><button class="btn-primary" id="u-copy">📋 Copiar UTM</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function normalizar(txt){
+  return String(txt).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/ñ/g,'n').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-').replace(/-+/g,'-');
+}
+const $=id=>document.getElementById(id);
+
+const PAISES={'Colombia':'co','Ecuador':'ec','Chile':'cl','Perú':'pe','Argentina':'ar','Panamá':'pa','Costa Rica':'cr','Uruguay':'uy','El Salvador':'sa','Guatemala':'gu','Honduras':'ho'};
+const TIPOS={'Tactico':'tc','Always On':'ao'};
+const MARCAS=['Avatr','BMW','Bravoauto','Changan','Citroen','Deepal','Dercocenter','Dercomaquinarias','DFSK','Forland','Geely','GWM','Harley Davidson','Hino','JAC','JAC Camiones','Mazda','Mercedes','Mini','Motorrad','Renault','Seres','Subaru','Suzuki','Volvo'];
+
+const MODELOS_BASE={
+  'Avatr':['Avatr 07','Avatr 11 EV'],
+  'BMW':['330e','i4','iX','iX2','ix1','M240i','m235i','m340i','m440i','q5','Serie 1','Serie 2 coupe','Serie 2 gran coupe','Serie 3','Serie 4-420i','Serie 4-430i','X1','X2','X3','X4','X5','X6','X7','Z4'],
+  'Bravoauto':['Carros Usados'],
+  'Changan':['Alsvin','Comerciales','CS15','CS35','CS55','F70','Honor S','Hunter','New Van','Series M','Star Truck','Super Van','SUV','Uni-K','Uni-T','Van Turismo','X7'],
+  'Citroen':['Berlingo','C3','C4','C5','Jumper'],
+  'Deepal':['G318','S05','S07'],
+  'Dercocenter':['Marcas'],
+  'Dercomaquinarias':['Agrícola','Cargador frontal','Excavadora 215DA','Excavadora XE380DK','Industrial','Minicargador','Motoniveladora','Pickup D1','Refritruck','Rental','Retroexcavadora','Rodillo vibratorio','Seres','Truck Cabina Doble','Truck Cabina Simple','Utilitarios'],
+  'DFSK':['600','600 PHEV','C35','C37','Cargo Box','Cargo Van','EC35','Glory 500','Glory 560','Glory 580','K05S BASIC','K05S Luxury'],
+  'Forland':['F250','F350','F600','F650','Refritruck','Seres','Truck Cabina Doble','Truck Cabina Simple'],
+  'Geely':['Azkarra','Coolray','GX3','Okavango'],
+  'GWM':['Dargo','H6','H6-GT','h6-Hev','H7','Jolion Pro','jolion-hev','New Jolion','Ora 03','Poer','poer-2.4','Poer AT','poer-mt','Tank 300','Tank 500','Wingle 5','Wingle 7'],
+  'Harley Davidson':['CVO Road Glide','CVO Road Glide ST','CVO Street Glide','Road Glide','Street Glide','Street Glide Ultra'],
+  'Hino':['CITY515','FC1118','FD1121','FG1728','GH1826','GH1835','XZU616','XZU617','XZU717','XZU816','XZU817','XZU917'],
+  'JAC':['1035','1042','1070','1090','M3 PANEL EV','N55 EV','SD1000','SUNRAY','T8 EV','T8 PRO','T9 4X4','X200'],
+  'JAC Camiones':['4X2','A300','Construccion','D300','D400','D400DC','D700','K7','K7 ATM','Livianos','Medianos','Mixer','Pesados','SD400','SD500','SD8000','Sunray','Torton','Volquete 10M3','Volquete 15M3','Volquete 17M3','Volquete 3M3','Volquete 7M3'],
+  'Mazda':['BT-50','CX-3','CX-30','CX-5','CX-60','CX-9','CX-90','Mazda-3-Sedan','Mazda-3-Sport'],
+  'Mercedes':['C200','C43','EQA350','EQB350','G500','G63','GLA250','GLB200','GLB250','GLC200','GLC300','GLE450','GLE53','GLS450'],
+  'Mini':['3 Puertas','5 Puertas','Aceman','Countryman','Countryman electrico','MINI cooper cabrio','MINI cooper eléctrico','MINI JCW 3 puertas','MINI JCW cabrio','MINI JCW countryman'],
+  'Motorrad':['1300 gs','1300 gs adv','Accesorios','BMPS','CE 02','CE 04','F 900 GS ADV','f800 gs','f900 gs','g 310r','g310gs','Influencer','M 1000 R','R 1250 R','S 1000 XR','Service month'],
+  'Renault':['Arkana','Duster','Kardian','Koleos','Kwid','Kwid E-tech','Master Mini bus','Oroch','Oroch CTV','Stepway'],
+  'Seres':['E5','Seres 3','Seres 5'],
+  'Subaru':['Crosstrek','Evoltis','Forester','Impreza','Outback','WRX'],
+  'Suzuki':['Alto','APV Van','Baleno','Carry','Celerio','Dzire','Ertiga','Fronx','Grand Vitara','Jimny','S-Cross','S-presso','Swift','Swift-Hybrid','Vitara','XL7'],
+  'Volvo':['EC40','EX30','EX40','Lineup','XC60 Plug-In','XC60 Polestar','XC90']
+};
+const MODELOS={};
+MARCAS.forEach(m=>{ MODELOS[m]=['Brand','Generico'].concat(MODELOS_BASE[m]||[]); });
+
+const OBJETIVOS=['Alcance','Trafico','Conversión'];
+const SUBTIPOS=['Branding','Lanzamiento','Modelos','Modelos Foco','Remarketing','Agendamiento','Cyber','Blackdays','Competencia','Store','Prelanzamiento','Test Drive','Post','Casa Matriz','Híbridos','Sucursales','Ecommerce','Mantenciones','Postventa'];
+const PLATAFORMAS=['Meta','Google','Tiktok','Youtube','DV360'];
+const MESES={'ene':'Enero','feb':'Febrero','mar':'Marzo','abr':'Abril','may':'Mayo','jun':'Junio','jul':'Julio','ago':'Agosto','sep':'Septiembre','oct':'Octubre','nov':'Noviembre','dic':'Diciembre'};
+const PLAT_TO_FORMKEY={'meta':'META','google':'GOOGLE','tiktok':'TIKTOK','youtube':'YOUTUBE','dv360':'DV360'};
+const FORMATOS={
+  'META':[['Linkad','linkad'],['Leadads','leadads'],['Carrusel','carrusel'],['Reserva (R&F)','r&f'],['Collection','collection'],['Flexibles (flexible-ads)','flexible-ads'],['Catalogo (ama)','ama'],['Experience','experience'],['Promo post','promo-post'],['Parn','parn']],
+  'GOOGLE':[['Search','search'],['Pmax','pmax'],['Generación de demanda (DemandGen)','demandgen'],['Shopping','shopping'],['Display','display'],['Aplicación (app)','app'],['Concecionarios (app-tiendas)','app-tiendas']],
+  'YOUTUBE':[['Bumper','bumper'],['Trueview','trueview'],['Masthead','masthead'],['VideoReach','videoreach'],['Instream','instream'],['Infeed','infeed']],
+  'DV360':[['Display','display'],['Video','video'],['Connected TV (CTV)','ctv'],['Audio','audio'],['DOOH','dooh'],['Movil App Install (app)','app'],['Ads in Movil Apps (ad-in-app)','ad-in-app'],['Youtube video','youtube-video'],['Youtube audio','youtube-audio'],['Generación de demanda (DemandGen)','demandgen']],
+  'TIKTOK':[['In-Feed','in-feed'],['TopView','topview'],['Spark','spark'],['Shopping-ads','shopping-ads']]
+};
+const SEGMENTACION=['Abierto','Remarketing','Similares','Intereses','BBDD'  ];
+const MEDIUMS=[['Costo Por Mil impresiones (cpm)','cpm'],['Costo Por Clic (cpc)','cpc'],['Costo Por Visualización (cpv)','cpv'],['Costo Por Acción (cpa)','cpa'],['Costo Por Lead (cpl)','cpl'],['Costo Por Interacción o Instalación (cpi)','cpi']];
+
+function fillCoded(sel,obj,ph){sel.innerHTML='<option value="">'+ph+'</option>'+Object.entries(obj).map(([l,c])=>'<option value="'+c+'">'+l+' ('+c+')</option>').join('');}
+function fillList(sel,arr,ph){sel.innerHTML='<option value="">'+ph+'</option>'+arr.map(v=>'<option value="'+normalizar(v)+'">'+v+'</option>').join('');}
+function fillPairs(sel,pairs,ph){sel.innerHTML='<option value="">'+ph+'</option>'+pairs.map(([l,c])=>'<option value="'+c+'">'+l+'</option>').join('');}
+function fillMeses(sel){sel.innerHTML='<option value="">Mes…</option>'+Object.entries(MESES).map(([c,l])=>'<option value="'+c+'">'+l+' ('+c+')</option>').join('');}
+
+fillCoded($('pais'),PAISES,'Selecciona país…');
+fillCoded($('tipo'),TIPOS,'Selecciona tipo…');
+fillList($('marca'),MARCAS,'Selecciona marca…');
+fillList($('objetivo'),OBJETIVOS,'Selecciona objetivo…');
+fillList($('subtipo'),SUBTIPOS,'Selecciona subtipo…');
+fillList($('plataforma'),PLATAFORMAS,'Selecciona plataforma…');
+fillMeses($('mes'));
+
+function marcaName(){const s=$('marca');return s.options[s.selectedIndex]?.text;}
+function renderModelos(){
+  const name=marcaName(),cont=$('models');
+  if(!$('marca').value||!MODELOS[name]){cont.innerHTML='';$('selcount').textContent='';syncAll();return;}
+  cont.innerHTML=MODELOS[name].map(m=>'<label class="mitem"><input type="checkbox" class="modchk" value="'+normalizar(m)+'" data-label="'+m+'"><span>'+m+'</span></label>').join('');
+  cont.querySelectorAll('.modchk').forEach(c=>c.onchange=()=>{countC();syncAll();});
+  countC();syncAll();
+}
+function selModels(){return [...document.querySelectorAll('#models .modchk:checked')].map(c=>({v:c.value,l:c.dataset.label}));}
+function countC(){const n=selModels().length;$('selcount').textContent=n?n+' modelo(s) seleccionado(s)':'';}
+$('marca').onchange=renderModelos;
+$('m-all').onclick=()=>{document.querySelectorAll('#models .modchk').forEach(c=>c.checked=true);countC();syncAll();};
+$('m-none').onclick=()=>{document.querySelectorAll('#models .modchk').forEach(c=>c.checked=false);countC();syncAll();};
+
+function buildFecha(mesId,anioId){const m=$(mesId).value,a=$(anioId).value.trim();return (m&&a)?m+a:'';}
+
+function segsC(){
+  const s=[];
+  if($('pais').value)s.push($('pais').value);
+  if($('tipo').value)s.push($('tipo').value);
+  if($('marca').value)s.push($('marca').value);
+  if($('objetivo').value)s.push($('objetivo').value);
+  const mods=selModels();if(mods.length)s.push(mods.map(x=>x.v).join('+'));
+  const f=buildFecha('mes','anio');if(f)s.push(f);
+  if($('subtipo').value)s.push($('subtipo').value);
+  if($('plataforma').value)s.push($('plataforma').value);
+  const l1=$('libre1').value.trim();if(l1)s.push(normalizar(l1));
+  const l2=$('libre2').value.trim();if(l2)s.push(normalizar(l2));
+  return s.filter(Boolean);
+}
+function nameC(){return segsC().join('_');}
+function renderC(){
+  const segs=segsC();
+  $('result').innerHTML=segs.length?segs.map(x=>'<span class="seg">'+x+'</span>').join('<span class="sep">_</span>'):'<span style="color:var(--muted)">Completa los campos…</span>';
+  $('utmline').innerHTML=segs.length?'<b>utm_campaign</b>='+nameC():'';
+}
+['libre1','libre2','anio'].forEach(id=>$(id).oninput=syncAll);
+['pais','tipo','objetivo','subtipo','plataforma','mes'].forEach(id=>$(id).onchange=syncAll);
+
+fillList($('g-seg'),SEGMENTACION,'Selecciona segmentación…');
+fillMeses($('g-mes'));fillMeses($('a-mes'));
+
+function refreshFormatoGrupo(){
+  const platCode=$('plataforma').value;
+  const key=PLAT_TO_FORMKEY[platCode];
+  const prev=$('g-formato').value;
+  const sel=$('g-formato');
+  if(!key){sel.innerHTML='<option value="">Elige plataforma en Campaña</option>';sel.disabled=true;return;}
+  sel.disabled=false;
+  fillPairs(sel,FORMATOS[key],'Selecciona formato…');
+  if(prev && [...sel.options].some(o=>o.value===prev)) sel.value=prev;
+}
+$('g-formato').onchange=syncAll;
+
+function renderInheritModels(){
+  const mods=selModels();
+  ['g','a'].forEach(p=>{
+    const cont=$(p+'-models');
+    const prev=new Set([...cont.querySelectorAll('.'+p+'chk:checked')].map(c=>c.value));
+    if(!mods.length){cont.innerHTML='<div style="color:var(--muted);font-size:.84rem;padding:10px;grid-column:1/-1">Elige modelos en Campaña.</div>';$(p+'-selcount').textContent='';return;}
+    cont.innerHTML=mods.map(m=>'<label class="mitem"><input type="checkbox" class="'+p+'chk" value="'+m.v+'" '+(prev.has(m.v)?'checked':'')+'><span>'+m.l+'</span></label>').join('');
+    cont.querySelectorAll('.'+p+'chk').forEach(c=>c.onchange=syncAll);
+    const n=cont.querySelectorAll('.'+p+'chk:checked').length;$(p+'-selcount').textContent=n?n+' modelo(s) seleccionado(s)':'';
+  });
+}
+function selSub(p){return [...document.querySelectorAll('.'+p+'chk:checked')].map(c=>c.value);}
+
+function segsG(){
+  const s=[];
+  if($('subtipo').value)s.push($('subtipo').value);
+  if($('g-formato').value)s.push($('g-formato').value);
+  const f=buildFecha('g-mes','g-anio');if(f)s.push(f);
+  const mods=selSub('g');if(mods.length)s.push(mods.join('+'));
+  if($('g-seg').value)s.push($('g-seg').value);
+  const l=$('g-libre').value.trim();if(l)s.push(normalizar(l));
+  return s.filter(Boolean);
+}
+function renderG(){const segs=segsG();$('g-result').innerHTML=segs.length?segs.map(x=>'<span class="seg">'+x+'</span>').join('<span class="sep">_</span>'):'<span style="color:var(--muted)">Completa los campos…</span>';}
+['g-anio','g-libre'].forEach(id=>$(id).oninput=syncAll);['g-mes','g-seg'].forEach(id=>$(id).onchange=syncAll);
+
+function segsA(){
+  const s=[];
+  if($('subtipo').value)s.push($('subtipo').value);
+  if($('g-formato').value)s.push($('g-formato').value);
+  const f=buildFecha('a-mes','a-anio');if(f)s.push(f);
+  const mods=selSub('a');if(mods.length)s.push(mods.join('+'));
+  const l1=$('a-libre1').value.trim();if(l1)s.push(normalizar(l1));
+  const l2=$('a-libre2').value.trim();if(l2)s.push(normalizar(l2));
+  return s.filter(Boolean);
+}
+function nameA(){return segsA().join('_');}
+function renderA(){const segs=segsA();$('a-result').innerHTML=segs.length?segs.map(x=>'<span class="seg">'+x+'</span>').join('<span class="sep">_</span>'):'<span style="color:var(--muted)">Completa los campos…</span>';}
+['a-anio','a-libre1','a-libre2'].forEach(id=>$(id).oninput=syncAll);['a-mes'].forEach(id=>$(id).onchange=syncAll);
+
+fillPairs($('u-medium'),MEDIUMS,'Selecciona medium…');
+$('u-url').oninput=renderU;
+$('u-medium').onchange=renderU;
+function isLeadads(){return $('plataforma').value==='meta' && $('g-formato').value==='leadads';}
+function renderU(){
+  const url=$('u-url').value.trim();
+  const source=$('u-source').value.trim();
+  const medium=$('u-medium').value;
+  const campaign=$('u-campaign').value.trim();
+  const content=$('u-content').value.trim();
+  const lead=isLeadads();
+  const params=[];
+  if(source)params.push('utm_source='+source);
+  if(medium)params.push('utm_medium='+medium);
+  if(campaign)params.push('utm_campaign='+campaign);
+  if(content)params.push('utm_content='+content);
+  const query=params.join('&');
+  let out='';
+  if(url){const sep=url.includes('?')?'&':'?';out=url+(query?sep+query:'');}
+  else if(lead){out=query;}
+  else{$('u-result').innerHTML='<span style="color:var(--warn)">Ingresa una URL (Leadads no detectado, la URL es obligatoria).</span>';return;}
+  $('u-result').innerHTML=out?highlightUTM(out):'<span style="color:var(--muted)">Completa los campos…</span>';
+}
+function highlightUTM(u){return u.replace(/(utm_[a-z]+)=([^&]*)/g,'<span class="seg">$1</span>=$2').replace(/([?&])/g,'<span class="sep">$1</span>');}
+
+function syncAll(){
+  renderC();
+  const subTxt=$('subtipo').value?$('subtipo').options[$('subtipo').selectedIndex].text:'';
+  $('g-sub').value=subTxt;$('a-sub').value=subTxt;
+  const platTxt=$('plataforma').value?$('plataforma').options[$('plataforma').selectedIndex].text.replace(/\s*\(.*\)$/,''):'';
+  $('g-platform-show').value=platTxt;$('a-platform-show').value=platTxt;
+  refreshFormatoGrupo();
+  const gFormTxt=$('g-formato').value?$('g-formato').options[$('g-formato').selectedIndex].text:'';
+  $('a-formato-show').value=gFormTxt;
+  renderInheritModels();
+  renderG();renderA();
+  $('u-source').value=$('plataforma').value||'';
+  $('u-campaign').value=nameC();
+  $('u-content').value=nameA();
+  const lead=isLeadads();const el=$('u-lead');
+  el.value=lead?'Sí — se genera sin URL':'No';el.className=lead?'lead-si':'lead-no';
+  renderU();
+}
+
+async function copy(t){try{await navigator.clipboard.writeText(t);return true;}catch{return false;}}
+$('copy').onclick=async()=>{const n=nameC();if(!n)return;toast(await copy(n)?'¡Nomenclatura copiada!':'Error');};
+$('copyUtm').onclick=async()=>{const n=nameC();if(!n)return;toast(await copy('utm_campaign='+n)?'¡utm_campaign copiada!':'Error');};
+$('g-copy').onclick=async()=>{const n=segsG().join('_');if(!n)return;toast(await copy(n)?'¡Copiado!':'Error');};
+$('a-copy').onclick=async()=>{const n=nameA();if(!n)return;toast(await copy(n)?'¡Copiado!':'Error');};
+$('u-copy').onclick=async()=>{const t=$('u-result').textContent.trim();if(!t||t.startsWith('Completa')||t.startsWith('Ingresa'))return;toast(await copy(t)?'¡UTM copiada!':'Error');};
+
+$('reset').onclick=()=>{['pais','tipo','marca','objetivo','subtipo','plataforma','mes'].forEach(id=>$(id).value='');['anio','libre1','libre2'].forEach(id=>$(id).value='');$('models').innerHTML='';$('selcount').textContent='';syncAll();};
+$('g-reset').onclick=()=>{$('g-formato').value='';['g-mes','g-seg'].forEach(id=>$(id).value='');['g-anio','g-libre'].forEach(id=>$(id).value='');syncAll();};
+$('a-reset').onclick=()=>{['a-mes'].forEach(id=>$(id).value='');['a-anio','a-libre1','a-libre2'].forEach(id=>$(id).value='');syncAll();};
+
+const ORDER_CAMPANA=['pais','tipo','marca','objetivo','modelo','fecha','subtipo','plataforma','libre1','libre2'];
+const SET_PAIS=new Set(Object.values(PAISES));
+const SET_TIPO=new Set(Object.values(TIPOS));
+const MARCA_BY_CODE={};MARCAS.forEach(m=>MARCA_BY_CODE[normalizar(m)]=m);
+const SET_MARCA=new Set(Object.keys(MARCA_BY_CODE));
+const OBJ_BY_CODE={};OBJETIVOS.forEach(o=>OBJ_BY_CODE[normalizar(o)]=o);
+const SET_OBJ=new Set(Object.keys(OBJ_BY_CODE));
+const SUB_BY_CODE={};SUBTIPOS.forEach(s=>SUB_BY_CODE[normalizar(s)]=s);
+const SET_SUB=new Set(Object.keys(SUB_BY_CODE));
+const PLAT_BY_CODE={};PLATAFORMAS.forEach(p=>PLAT_BY_CODE[normalizar(p)]=p);
+const SET_PLAT=new Set(Object.keys(PLAT_BY_CODE));
+const reFecha=/^(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)\d{4}$/;
+
+function autoFillFromParts(parts){
+  $('pais').value=SET_PAIS.has(parts[0])?parts[0]:'';
+  $('tipo').value=SET_TIPO.has(parts[1])?parts[1]:'';
+  const mName=MARCA_BY_CODE[parts[2]];
+  $('marca').value=mName?normalizar(mName):'';
+  renderModelos();
+  $('objetivo').value=SET_OBJ.has(parts[3])?parts[3]:'';
+  if(parts[4]!==undefined){const mods=parts[4].split('+');document.querySelectorAll('#models .modchk').forEach(c=>c.checked=mods.includes(c.value));}
+  if(parts[5]!==undefined&&reFecha.test(parts[5])){$('mes').value=parts[5].slice(0,3);$('anio').value=parts[5].slice(3);}else{$('mes').value='';$('anio').value='';}
+  $('subtipo').value=SET_SUB.has(parts[6])?parts[6]:'';
+  $('plataforma').value=SET_PLAT.has(parts[7])?parts[7]:'';
+  $('libre1').value=parts[8]!==undefined?parts[8]:'';
+  $('libre2').value=parts[9]!==undefined?parts[9]:'';
+  countC();syncAll();
+}
+$('valin').oninput=()=>{
+  const raw=$('valin').value;
+  if(!raw.trim()){$('valmsg').textContent='';$('valout').style.display='none';return;}
+  const fixed=raw.trim().split('_').map((seg,i)=>i===4?seg.split('+').map(normalizar).join('+'):seg).join('_');
+  const parts=fixed.split('_');
+  const errors=[];
+  const check=(i,set,label)=>{if(parts[i]!==undefined&&!set.has(parts[i]))errors.push('Posición '+(i+1)+' ('+label+') "'+parts[i]+'" no es válido.');};
+  check(0,SET_PAIS,'país');check(1,SET_TIPO,'tipo');check(2,SET_MARCA,'marca');check(3,SET_OBJ,'objetivo');
+  if(parts[5]!==undefined&&!reFecha.test(parts[5]))errors.push('Posición 6 (fecha) "'+parts[5]+'" no tiene formato tipo oct2026.');
+  if(parts[6]!==undefined)check(6,SET_SUB,'subtipo');
+  if(parts[7]!==undefined)check(7,SET_PLAT,'plataforma');
+  if(parts.length<4)errors.push('Faltan segmentos obligatorios (mínimo pais_tipo_marca_objetivo).');
+  const out=$('valout');out.style.display='block';
+  if(errors.length){
+    out.className='valout bad';out.textContent=fixed;
+    $('valmsg').className='valmsg bad';
+    $('valmsg').innerHTML='⚠️ No cumple el orden esperado:<br>'+errors.join('<br>')+'<br>Orden correcto: '+ORDER_CAMPANA.join('_');
+  }else{
+    out.className='valout ok';out.textContent=fixed;
+    $('valmsg').className='valmsg ok';$('valmsg').textContent='✅ Orden correcto · se rellenó el generador con estos datos.';
+    autoFillFromParts(parts);
+  }
+};
+
+function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='toast show'+(err?' err':'');setTimeout(()=>t.classList.remove('show'),1800);}
+
+syncAll();
+</script>
+</body>
+</html>
